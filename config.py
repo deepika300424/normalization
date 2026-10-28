@@ -1,3 +1,5 @@
+"""Load runtime settings and define concurrency, retries, and CSV column order."""
+
 from __future__ import annotations
 
 import os

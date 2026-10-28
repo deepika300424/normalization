@@ -1,3 +1,5 @@
+"""Pydantic response models defining Gemini's required extraction structure."""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -6,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class LineExtraction(BaseModel):
+    """Offer fields for one customer line type, plus required extraction reasoning."""
+
     model_config = ConfigDict(extra="forbid")
 
     switcher: Optional[str] = None
@@ -31,6 +35,8 @@ class LineExtraction(BaseModel):
 
 
 class ExtractionResponse(BaseModel):
+    """Structured extraction containing separate New Line and Upgrade results."""
+
     model_config = ConfigDict(extra="forbid")
 
     new_line: LineExtraction

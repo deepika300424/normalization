@@ -1,3 +1,5 @@
+"""System instructions and compact product payload construction for Gemini."""
+
 from __future__ import annotations
 
 import json
@@ -20,6 +22,12 @@ as rewards. For the AT&T Points Plus Card example, the new-line finance value is
 ($200 welcome credit + $240 annual credits + $10 bill discount); the upgrade value is
 $250 ($240 + $10). The $1,000 purchase threshold is not part of either value.
 
+Use only offer text present in the payload. Do not use a monthly device installment price
+as a promotional value. Keep each benefit in its matching category; do not copy the same
+benefit into multiple categories. When an offer lists multiple storage variants, use only
+the amount stated for the exact input variant. Do not transfer an offer's eligibility or
+amount to another offer.
+
 For the iPhone 17 Pro Max 256 GB example, the matching new-line offer has unique_discount
 $660.36 and a separate service-line offer worth $200. The $5.56 monthly credit is the
 explanation of that $200, not another unique discount. Its upgrade fields are null when
@@ -32,6 +40,7 @@ eligibility, and any composite arithmetic. It is discarded by Python before CSV 
 
 
 def _offer_text(offer: dict[str, Any]) -> str:
+    """Combine the visible and expanded detail text for a single offer."""
     details = offer.get("full_details") or {}
     parts = [offer.get("title"), offer.get("description"), offer.get("raw")]
     parts.extend(
@@ -46,6 +55,7 @@ def _offer_text(offer: dict[str, Any]) -> str:
 
 
 def build_llm_payload(product: dict[str, Any]) -> dict[str, Any]:
+    """Select the product, offer, accessory, and add-on data sent to Gemini."""
     accessories = []
     for item in product.get("accessories_offers", []):
         accessories.append({
@@ -75,6 +85,7 @@ def build_llm_payload(product: dict[str, Any]) -> dict[str, Any]:
 
 
 def user_prompt(payload: dict[str, Any], correction: str | None = None) -> str:
+    """Serialize a product payload and optional validation feedback as the user prompt."""
     message = "Extract both New Line and Upgrade records from this product payload."
     if correction:
         message += f" Correct these validation errors from the previous attempt: {correction}"

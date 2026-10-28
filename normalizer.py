@@ -1,3 +1,5 @@
+"""Validate extracted values and map product/extraction data into CSV rows."""
+
 from __future__ import annotations
 
 import re
@@ -12,6 +14,7 @@ PLACEHOLDERS = {"", "n/a", "na", "none", "null", "-", "0"}
 
 
 def money(value: Any) -> str | None:
+    """Return a normalized positive currency string, or None for invalid/empty values."""
     if value is None:
         return None
     text = str(value).strip()
@@ -24,18 +27,24 @@ def money(value: Any) -> str | None:
         amount = Decimal(match.group(1))
     except InvalidOperation:
         return None
-    if amount < 0:
+    if amount <= 0:
         return None
-    return f"${match.group(1)}"
+    whole, _, fractional = match.group(1).partition(".")
+    whole = str(int(whole))
+    fractional = fractional.rstrip("0")
+    normalized = f"{whole}.{fractional}" if fractional else whole
+    return f"${normalized}"
 
 
 def _text(value: Any) -> str | None:
+    """Trim text and convert missing-value placeholders to None."""
     if value is None or str(value).strip().lower() in PLACEHOLDERS:
         return None
     return str(value).strip()
 
 
 def _duration(product: dict[str, Any], extracted: LineExtraction) -> str | None:
+    """Use the extracted plan duration, or infer it from the product pricing options."""
     if extracted.rateplan_duration_months:
         return extracted.rateplan_duration_months
     text = " ".join(str(option) for option in product.get("pricing", {}).get("options", []))
@@ -44,6 +53,7 @@ def _duration(product: dict[str, Any], extracted: LineExtraction) -> str | None:
 
 
 def validate_extraction(extracted: LineExtraction) -> None:
+    """Reject extracted monetary fields that cannot be normalized as currency."""
     monetary_fields = (
         "switcher",
         "unique_discount",
@@ -61,10 +71,11 @@ def validate_extraction(extracted: LineExtraction) -> None:
 
 
 def normalize_row(product: dict[str, Any], line_type: str, extracted: LineExtraction) -> dict[str, Any]:
+    """Map product metadata and one line extraction to the exact CSV column set."""
     row: dict[str, Any] = {column: None for column in CSV_COLUMNS}
     pricing = product.get("pricing") or {}
     row.update({
-        "PLAN TYPE": "AT&T Installment Plan" if pricing.get("monthly") else None,
+        "PLAN TYPE": _text(product.get("plan_type")),
         "PRODUCT NAME": product.get("product_name"),
         "BRAND": product.get("brand"),
         "VARIANT": product.get("variant"),
